@@ -1,21 +1,19 @@
-FROM rust:1.98-slim AS builder
+FROM golang:1.26.6-alpine AS builder
 
 WORKDIR /app
 
-COPY Cargo.toml Cargo.lock ./
-COPY src ./src
+COPY go.mod go.sum ./
+RUN go mod download
 
-RUN cargo build --release --locked
+COPY *.go ./
 
-FROM debian:bookworm-slim
+RUN CGO_ENABLED=0 GOOS=linux go build -o proxy-service .
 
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+FROM alpine:latest
 
 WORKDIR /app
 
-COPY --from=builder /app/target/release/proxy-service .
+COPY --from=builder /app/proxy-service .
 
 EXPOSE 8000
 
