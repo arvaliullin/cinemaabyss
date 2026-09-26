@@ -1,0 +1,59 @@
+@startuml target-system-containers
+!RELATIVE_INCLUDE = "."
+!include c4/C4_Container.puml
+
+title Диаграмма контейнеров целевой архитектуры "Кинобездна"
+
+Person(user, "Пользователь", "Смотрит фильмы по подписке, оценивает контент и собирает избранное")
+
+System_Ext(payment_provider, "Платёжные системы", "Проводят оплату подписок")
+System_Ext(content_sources, "Онлайн-кинотеатры и S3", "Источники видео и медиафайлов")
+System_Ext(recommender, "Внешняя рекомендательная система", "Формирует персональные подборки")
+
+System_Boundary(cinemaabyss, "Экосистема Кинобездна") {
+
+  Container(client_app, "Клиентские приложения", "Web, мобильные устройства, смарт ТВ", "Интерфейс пользователя под каждый тип устройства")
+  Container(api_gateway, "API Gateway", "Go", "Единая точка входа, маршрутизирует запросы к сервисам")
+
+  Container(users_service, "Сервис пользователей", "Go, микросервис", "Пользователи и аутентификация")
+  Container(movies_service, "Сервис метаданных фильмов", "Go, микросервис", "Фильмы, жанры, актёры, оценки, избранное, ссылки на видео")
+  Container(subscription_service, "Сервис подписок", "Go, микросервис", "Подписки и скидки")
+  Container(payment_service, "Сервис платежей", "Go, микросервис", "Проведение и учёт платежей")
+  Container(events_service, "Сервис событий", "Go, микросервис", "Обрабатывает доменные события и обменивается данными с рекомендательной системой")
+
+  ContainerQueue(kafka, "Kafka", "Брокер сообщений", "Передаёт доменные события между сервисами")
+
+  ContainerDb(users_db, "База пользователей", "PostgreSQL")
+  ContainerDb(movies_db, "База метаданных", "PostgreSQL")
+  ContainerDb(subscription_db, "База подписок", "PostgreSQL")
+  ContainerDb(payment_db, "База платежей", "PostgreSQL")
+}
+
+Rel(user, client_app, "Использует", "HTTPS")
+Rel(client_app, api_gateway, "Отправляет запросы", "REST, JSON")
+
+Rel(api_gateway, users_service, "Аутентификация и данные пользователей", "REST")
+Rel(api_gateway, movies_service, "Каталог, оценки, избранное, просмотр", "REST")
+Rel(api_gateway, subscription_service, "Подписки и скидки", "REST")
+Rel(api_gateway, payment_service, "Оплата", "REST")
+
+Rel(payment_service, subscription_service, "Подтверждает оплату подписки", "REST")
+Rel(movies_service, subscription_service, "Проверяет активную подписку", "REST")
+
+Rel(users_service, kafka, "Публикует события пользователей")
+Rel(movies_service, kafka, "Публикует события фильмов и оценок")
+Rel(subscription_service, kafka, "Публикует события подписок")
+Rel(payment_service, kafka, "Публикует события платежей")
+Rel(kafka, events_service, "Передаёт доменные события")
+
+Rel(payment_service, payment_provider, "Проводит платежи", "HTTPS")
+Rel(movies_service, content_sources, "Получает контент и медиафайлы", "HTTPS, S3 API")
+Rel(events_service, recommender, "Передаёт события и получает подборки", "Асинхронно")
+
+Rel(users_service, users_db, "Читает и сохраняет")
+Rel(movies_service, movies_db, "Читает и сохраняет")
+Rel(subscription_service, subscription_db, "Читает и сохраняет")
+Rel(payment_service, payment_db, "Читает и сохраняет")
+
+LAYOUT_TOP_DOWN()
+@enduml
