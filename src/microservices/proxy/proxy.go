@@ -1,7 +1,7 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"math/rand/v2"
 	"net/http"
 	"net/http/httputil"
@@ -9,7 +9,7 @@ import (
 )
 
 // newProxyHandler создаёт обработчик маршрутизации между upstream-сервисами.
-func newProxyHandler(cfg config) http.Handler {
+func newProxyHandler(cfg config, log *slog.Logger) http.Handler {
 	monolithProxy := newReverseProxy(cfg.monolithTarget)
 	moviesProxy := newReverseProxy(cfg.moviesServiceTarget)
 
@@ -23,7 +23,11 @@ func newProxyHandler(cfg config) http.Handler {
 			target = cfg.moviesServiceTarget
 		}
 
-		log.Printf("proxying %s %s to %s", r.Method, r.URL.RequestURI(), target)
+		log.Info("proxying request",
+			"method", r.Method,
+			"uri", r.URL.RequestURI(),
+			"target", target.String(),
+		)
 		proxy.ServeHTTP(w, r)
 	})
 }

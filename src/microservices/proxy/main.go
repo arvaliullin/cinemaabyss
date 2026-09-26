@@ -3,8 +3,9 @@ package main
 import (
 	"context"
 	"errors"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 	"time"
@@ -13,9 +14,13 @@ import (
 const shutdownTimeout = 5 * time.Second
 
 func main() {
+	log := slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "proxy")
+	slog.SetDefault(log)
+
 	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatal(err)
+		log.Error("failed to load config", "error", err)
+		os.Exit(1)
 	}
 
 	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
@@ -23,23 +28,28 @@ func main() {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", health)
-	mux.Handle("/", newProxyHandler(cfg))
+	mux.Handle("/", newProxyHandler(cfg, log))
 
 	server := &http.Server{Addr: ":" + cfg.Port, Handler: mux}
 	go func() {
-		log.Printf("Proxy service listening on %s", server.Addr)
+		log.Info("proxy service listening",
+			"address", server.Addr,
+			"gradual_migration", cfg.GradualMigration,
+			"movies_migration_percent", cfg.MoviesMigrationPercent,
+		)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("server error: %v", err)
+			log.Error("server error", "error", err)
+			os.Exit(1)
 		}
 	}()
 
 	<-ctx.Done()
-	log.Println("shutting down gracefully...")
+	log.Info("shutting down gracefully")
 
 	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer shutdownCancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		log.Printf("server shutdown error: %v", err)
+		log.Error("server shutdown error", "error", err)
 	}
-	log.Println("proxy service stopped")
+	log.Info("proxy service stopped")
 }
