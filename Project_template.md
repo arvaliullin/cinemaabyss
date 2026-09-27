@@ -8,6 +8,10 @@
 
 ## Задание 2. Proxy и Kafka
 
+**Запрос к API Gateway: GET /api/movies**
+
+![Запрос к API Gateway](docs/images/proxy-api-movies.png)
+
 **Результаты Postman-тестов**
 
 ![Результаты Postman-тестов](docs/images/tests-postman.png)
