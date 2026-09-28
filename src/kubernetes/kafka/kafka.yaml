@@ -60,13 +60,15 @@ spec:
             memory: "256Mi"
             cpu: "100m"
           limits:
-            memory: "512Mi"
+            memory: "1Gi"
             cpu: "500m"
         env:
         - name: ZOOKEEPER_CLIENT_PORT
           value: "2181"
         - name: ZOOKEEPER_TICK_TIME
           value: "2000"
+        - name: ZK_SERVER_HEAP
+          value: "256"
         volumeMounts:
         - name: zookeeper-data
           mountPath: /var/lib/zookeeper/data
