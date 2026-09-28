@@ -126,114 +126,30 @@ cat .docker/config.json | base64
 
 #### Шаг 2
 
-  Доработайте src/kubernetes/event-service.yaml и src/kubernetes/proxy-service.yaml
+**Логи events-service после тестов**
 
-  - Необходимо создать Deployment и Service 
-  - Доработайте ingress.yaml, чтобы можно было с помощью тестов проверить создание событий
-  - Выполните дальшейшие шаги для поднятия кластера:
+```bash
+kubectl -n cinemaabyss logs -l app=events-service
+```
 
-  1. Создайте namespace:
-  ```bash
-  kubectl apply -f src/kubernetes/namespace.yaml
-  ```
-  2. Создайте секреты и переменные
-  ```bash
-  kubectl apply -f src/kubernetes/configmap.yaml
-  kubectl apply -f src/kubernetes/secret.yaml
-  kubectl apply -f src/kubernetes/dockerconfigsecret.yaml
-  kubectl apply -f src/kubernetes/postgres-init-configmap.yaml
-  ```
-
-  3. Разверните базу данных:
-  ```bash
-  kubectl apply -f src/kubernetes/postgres.yaml
-  ```
-
-  На этом этапе если вызвать команду
-  ```bash
-  kubectl -n cinemaabyss get pod
-  ```
-  Вы увидите
-
-  NAME         READY   STATUS    
-  postgres-0   1/1     Running   
-
-  4. Разверните Kafka:
-  ```bash
-  kubectl apply -f src/kubernetes/kafka/kafka.yaml
-  ```
-
-  Проверьте, теперь должно быть запущено 3 пода, если что-то не так, то посмотрите логи
-  ```bash
-  kubectl -n cinemaabyss logs имя_пода (например - kafka-0)
-  ```
-
-  5. Разверните монолит:
-  ```bash
-  kubectl apply -f src/kubernetes/monolith.yaml
-  ```
-  6. Разверните микросервисы:
-  ```bash
-  kubectl apply -f src/kubernetes/movies-service.yaml
-  kubectl apply -f src/kubernetes/events-service.yaml
-  ```
-  7. Разверните прокси-сервис:
-  ```bash
-  kubectl apply -f src/kubernetes/proxy-service.yaml
-  ```
-
-  После запуска и поднятия подов вывод команды 
-  ```bash
-  kubectl -n cinemaabyss get pod
-  ```
-
-  Будет наподобие такого
-
-  NAME                              READY   STATUS    
-
-  events-service-7587c6dfd5-6whzx   1/1     Running  
-
-  kafka-0                           1/1     Running   
-
-  monolith-8476598495-wmtmw         1/1     Running  
-
-  movies-service-6d5697c584-4qfqs   1/1     Running  
-
-  postgres-0                        1/1     Running  
-
-  proxy-service-577d6c549b-6qfcv    1/1     Running  
-
-  zookeeper-0                       1/1     Running 
-
-  8. Добавим ingress
-
-  - добавьте аддон
-  ```bash
-  minikube addons enable ingress
-  ```
-  ```bash
-  kubectl apply -f src/kubernetes/ingress.yaml
-  ```
-  9. Добавьте в /etc/hosts
-  127.0.0.1 cinemaabyss.example.com
-
-  10. Вызовите
-  ```bash
-  minikube tunnel
-  ```
-  11. Вызовите https://cinemaabyss.example.com/api/movies
-  Вы должны увидеть вывод списка фильмов
-  Можно поэкспериментировать со значением   MOVIES_MIGRATION_PERCENT в src/kubernetes/configmap.yaml и убедится, что вызовы movies уходят полностью в новый сервис
-
-  12. Запустите тесты из папки tests/postman
-  ```bash
-   npm run test:kubernetes
-  ```
-  Часть тестов с health-чек упадет, но создание событий отработает.
-  Откройте логи event-service и сделайте скриншот обработки событий
+```text
+{"time":"2026-09-28T20:26:52.805152471Z","level":"WARN","msg":"kafka connect attempt failed","service":"events","client":"producer","attempt":3,"max_attempts":30,"error":"kafka: client has run out of available brokers to talk to: dial tcp 10.96.134.30:9092: connect: connection refused"}
+{"time":"2026-09-28T20:26:56.571603667Z","level":"WARN","msg":"kafka connect attempt failed","service":"events","client":"producer","attempt":4,"max_attempts":30,"error":"kafka: client has run out of available brokers to talk to: dial tcp 10.96.134.30:9092: connect: connection refused"}
+{"time":"2026-09-28T20:27:00.600244293Z","level":"INFO","msg":"consumer started","service":"events","group":"events-service","topics":["movie-events","user-events","payment-events"]}
+{"time":"2026-09-28T20:27:00.60295746Z","level":"INFO","msg":"events service listening","service":"events","address":":8082"}
+{"time":"2026-09-28T20:39:12.981844633Z","level":"INFO","msg":"event published","service":"events","event_id":"movie-6-viewed","event_type":"movie","topic":"movie-events","partition":0,"offset":0}
+{"time":"2026-09-28T20:39:12.990400674Z","level":"INFO","msg":"event consumed","service":"events","topic":"movie-events","partition":0,"offset":0,"event_id":"movie-6-viewed","event_type":"movie","payload":{"action":"viewed","movie_id":6,"title":"Test Movie Event","user_id":4}}
+{"time":"2026-09-28T20:39:13.107879216Z","level":"INFO","msg":"event published","service":"events","event_id":"user-4-logged_in","event_type":"user","topic":"user-events","partition":0,"offset":0}
+{"time":"2026-09-28T20:39:13.110806091Z","level":"INFO","msg":"event consumed","service":"events","topic":"user-events","partition":0,"offset":0,"event_id":"user-4-logged_in","event_type":"user","payload":{"action":"logged_in","timestamp":"2026-09-28T20:39:13.098Z","user_id":4,"username":"testuser"}}
+{"time":"2026-09-28T20:39:13.231337174Z","level":"INFO","msg":"event published","service":"events","event_id":"payment-4-completed","event_type":"payment","topic":"payment-events","partition":0,"offset":0}
+{"time":"2026-09-28T20:39:13.234836341Z","level":"INFO","msg":"event consumed","service":"events","topic":"payment-events","partition":0,"offset":0,"event_id":"payment-4-completed","event_type":"payment","payload":{"amount":9.99,"method_type":"credit_card","payment_id":4,"status":"completed","timestamp":"2026-09-28T20:39:13.222Z","user_id":4}}
+```
 
 #### Шаг 3
-Добавьте сюда скриншота вывода при вызове https://cinemaabyss.example.com/api/movies и  скриншот вывода event-service после вызова тестов.
+
+**Вызов https://cinemaabyss.example.com/api/movies**
+
+![Список фильмов через Ingress](docs/images/kubernetes-api-movies.png)
 
 
 ## Задание 4
