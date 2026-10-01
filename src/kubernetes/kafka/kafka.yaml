@@ -45,9 +45,11 @@ spec:
       labels:
         app: zookeeper
     spec:
+      securityContext:
+        fsGroup: 1000
       containers:
       - name: zookeeper
-        image: wurstmeister/zookeeper
+        image: zookeeper:3.6.4
         ports:
         - containerPort: 2181
           name: client
@@ -60,16 +62,14 @@ spec:
             memory: "256Mi"
             cpu: "100m"
           limits:
-            memory: "512Mi"
+            memory: "1Gi"
             cpu: "500m"
         env:
-        - name: ZOOKEEPER_CLIENT_PORT
-          value: "2181"
-        - name: ZOOKEEPER_TICK_TIME
+        - name: ZOO_TICK_TIME
           value: "2000"
         volumeMounts:
         - name: zookeeper-data
-          mountPath: /var/lib/zookeeper/data
+          mountPath: /data
         readinessProbe:
           tcpSocket:
             port: 2181

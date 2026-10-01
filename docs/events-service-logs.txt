@@ -1,39 +1,3 @@
-## Задание 1. Проектирование архитектуры
-
-**Диаграмма контейнеров C4 целевой (To-Be) архитектуры**
-
-![Диаграмма контейнеров целевой архитектуры](schemas/images/target-system-containers.png)
-[Исходный код диаграммы](schemas/target-system-containers.puml)
-
-
-## Задание 2. Proxy и Kafka
-
-**Запрос к API Gateway: GET /api/movies**
-
-![Запрос к API Gateway](docs/images/proxy-api-movies.png)
-
-**Результаты Postman-тестов**
-
-![Результаты Postman-тестов](docs/images/tests-postman.png)
-
-**Состояние топиков Kafka**
-
-![Состояние топиков Kafka](docs/images/ui-kafka.png)
-
-
-## Задание 3
-
-**Вызов https://cinemaabyss.example.com/api/movies**
-
-![Список фильмов через Ingress](docs/images/kubernetes-api-movies.png)
-
-**Логи events-service после тестов**
-
-```bash
-kubectl -n cinemaabyss logs -l app=events-service
-```
-
-```text
 {"time":"2026-09-28T20:26:52.805152471Z","level":"WARN","msg":"kafka connect attempt failed","service":"events","client":"producer","attempt":3,"max_attempts":30,"error":"kafka: client has run out of available brokers to talk to: dial tcp 10.96.134.30:9092: connect: connection refused"}
 {"time":"2026-09-28T20:26:56.571603667Z","level":"WARN","msg":"kafka connect attempt failed","service":"events","client":"producer","attempt":4,"max_attempts":30,"error":"kafka: client has run out of available brokers to talk to: dial tcp 10.96.134.30:9092: connect: connection refused"}
 {"time":"2026-09-28T20:27:00.600244293Z","level":"INFO","msg":"consumer started","service":"events","group":"events-service","topics":["movie-events","user-events","payment-events"]}
@@ -44,29 +8,3 @@ kubectl -n cinemaabyss logs -l app=events-service
 {"time":"2026-09-28T20:39:13.110806091Z","level":"INFO","msg":"event consumed","service":"events","topic":"user-events","partition":0,"offset":0,"event_id":"user-4-logged_in","event_type":"user","payload":{"action":"logged_in","timestamp":"2026-09-28T20:39:13.098Z","user_id":4,"username":"testuser"}}
 {"time":"2026-09-28T20:39:13.231337174Z","level":"INFO","msg":"event published","service":"events","event_id":"payment-4-completed","event_type":"payment","topic":"payment-events","partition":0,"offset":0}
 {"time":"2026-09-28T20:39:13.234836341Z","level":"INFO","msg":"event consumed","service":"events","topic":"payment-events","partition":0,"offset":0,"event_id":"payment-4-completed","event_type":"payment","payload":{"amount":9.99,"method_type":"credit_card","payment_id":4,"status":"completed","timestamp":"2026-09-28T20:39:13.222Z","user_id":4}}
-```
-
-## Задание 4
-
-**Развертывание Helm**
-
-```bash
-helm install cinemaabyss ./src/kubernetes/helm --namespace cinemaabyss --create-namespace
-```
-
-![Установка Helm](docs/images/helm-deploy.png)
-
-**Вызов https://cinemaabyss.example.com/api/movies**
-
-![Список фильмов после установки Helm](docs/images/helm-api-movies.png)
-
-
-## Задание 5
-
-**Статистика circuit breaker для movies-service**
-
-```bash
-kubectl exec -n cinemaabyss fortio-deploy-5c49b44877-2kpkf -c istio-proxy -- pilot-agent request GET stats | grep movies-service | grep pending
-```
-
-![Срабатывание circuit breaker](docs/images/circuit-breaker.png)
